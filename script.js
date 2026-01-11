@@ -1,41 +1,46 @@
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoHvL7sZKTHmJdZv9fBYyYT7x57oPApX5S_fk95GjSV7VB0Ytw_EffbWnfcMlaT_sIT9hqfIZgFonD/pub?gid=0&single=true&output=csv";
+const SHEET_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vSoHvL7sZKTHmJdZv9fBYyYT7x57oPApX5S_fk95GjSV7VBOYtw_EffbWnfcMlaT_sIT9hqfIZgFonD/pub?gid=0&single=true&output=csv";
 
-async function loadMenu() {
-  const res = await fetch(SHEET_URL + "&cache=" + Date.now());
-  const text = await res.text();
+function loadMenu() {
+  Papa.parse(SHEET_URL + "&cache=" + Date.now(), {
+    download: true,
+    header: true,
+    complete: function (results) {
+      const menu = {};
+      const data = results.data;
 
-  const rows = text.split("\n").slice(1);
-  const menu = {};
+      data.forEach(row => {
+        if (row.Available !== "TRUE") return;
 
-  rows.forEach(row => {
-    const [category, name, price, desc, available] = row.split(",");
+        if (!menu[row.Category]) menu[row.Category] = [];
+        menu[row.Category].push({
+          name: row["Item Name"],
+          price: row.Price
+        });
+      });
 
-    if (available?.trim() !== "TRUE") return;
+      const container = document.getElementById("menu");
+      container.innerHTML = "";
 
-    if (!menu[category]) menu[category] = [];
-    menu[category].push({ name, price, desc });
-  });
+      Object.keys(menu).forEach(cat => {
+        const section = document.createElement("div");
+        section.className = "category";
+        section.innerHTML = `<h2>${cat}</h2>`;
 
-  const container = document.getElementById("menu");
-  container.innerHTML = "";
+        menu[cat].forEach(item => {
+          section.innerHTML += `
+            <div class="item">
+              <span>${item.name}</span>
+              <span class="price">$${item.price}</span>
+            </div>
+          `;
+        });
 
-  Object.keys(menu).forEach(cat => {
-    const section = document.createElement("div");
-    section.className = "category";
-    section.innerHTML = `<h2>${cat}</h2>`;
-
-    menu[cat].forEach(item => {
-      section.innerHTML += `
-        <div class="item">
-          <span>${item.name}</span>
-          <span class="price">$${item.price}</span>
-        </div>
-      `;
-    });
-
-    container.appendChild(section);
+        container.appendChild(section);
+      });
+    }
   });
 }
 
 loadMenu();
-setInterval(loadMenu, 30000); // refresh every 30 seconds
+setInterval(loadMenu, 30000);
